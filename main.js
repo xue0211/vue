@@ -4,28 +4,51 @@ fakeData()
    通过绑定事件，实现所有的this 都是 controller
    view 和 model 操作不了的部分交给 controller
 */
-let model = {
-  data: {
+
+function Model(options){
+  this.data = options.data
+  this.resource = options.resource
+}
+
+Model.prototype.fetch = function(id){
+  return axios.get(`/${this.resource}s/${id}`).then((response)=>{
+      this.data = response.data
+      return response
+  })
+
+}
+
+Model.prototype.update = function(data){
+   let id = this.data.id
+    return axios.put(`/${this.resource}s/${id}`, data).then((response)=>{
+      this.data = response.data
+      return response
+    })  // 更新数据
+}
+
+function View({el, template}){
+    this.el = el
+    this.template = template
+}
+View.prototype.render = function(data){
+   let html = this.template
+   for(let key in data){
+     html = html.replace(`__${key}__`, data[key])
+   }
+  $(this.el).html(html)
+}
+
+//------------ 上面是 MVC类，下面是对象
+let model = new Model({
+   data: {
     name: '',
     number: 0,
     id: ''
   }, // 初始数据
-  fetch(id){
-      return axios.get(`/books/${id}`).then((response)=>{
-      this.data = response.data
-      return response
-   })
-  }, // 获取数据
-  update(data){
-    id = this.data.id
-    return axios.put(`/books/${id}`, data).then((response)=>{
-      this.data = response.data
-      return response
-    })  // 更新数据
-  }
-}
+  resource: 'book' // 请求的 url
+})
 
-let view = {
+let view = new View({
   el: '#app', // element
   template:` 
    <div>
@@ -37,13 +60,8 @@ let view = {
     <button id="minusOne">减一</button>
     <button id="reset">归零</button>
    </div>
-`,  
-  render(data){
-    let html = this.template.replace('__name__', data.name)
-    .replace('__number__', data.number)
-    $(this.el).html(html)
-  }
-}  // 如何去更新 view
+  `
+})
 
 var controller = {
   init(options){
