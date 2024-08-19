@@ -1,8 +1,11 @@
 fakeData()
-/* 所有和数据相关的操作，全部都由 model 来实现;
-   所有和html有关的操作，全部都由 view来实现;
-   通过绑定事件，实现所有的this 都是 controller
-   view 和 model 操作不了的部分交给 controller
+/* 如何从传统的 MVC 变成 Vue 的 MVC？
+1.忘掉 render
+2.把 data 放到 view  上面
+3.需要改变那个值(name,number,id)，就直接去改那个值 --> 
+  更新 view.data, 它会去自动更新HTML
+4.Vue 会非常精细的更新它该更新的地方，未更新的地方不会刷新改变
+5.不再需要controller，已经合并到 Vue 里面
 */
 
 function Model(options){
@@ -26,18 +29,6 @@ Model.prototype.update = function(data){
     })  // 更新数据
 }
 
-function View({el, template}){
-    this.el = el
-    this.template = template
-}
-View.prototype.render = function(data){
-   let html = this.template
-   for(let key in data){
-     html = html.replace(`__${key}__`, data[key])
-   }
-  $(this.el).html(html)
-}
-
 //------------ 上面是 MVC类，下面是对象
 let model = new Model({
    data: {
@@ -48,76 +39,62 @@ let model = new Model({
   resource: 'book' // 请求的 url
 })
 
-let view = new View({
+let view = new Vue({
   el: '#app', // element
+  data: {
+   book:{
+      name: '未命名',
+      number: 0,
+      id: ''
+      },
+    n: 1
+  },
   template:` 
+ <div>
    <div>
-      书名：《__name__》
-      数量：<span id="number">__number__</span>
+      书名：《{{book.name}}》
+      数量：<span id="number">{{book.number}}</span>
    </div>
    <div>
-    <button id="addOne">加一</button>
-    <button id="minusOne">减一</button>
-    <button id="reset">归零</button>
+       <input v-model="n" />
+      N 的值是 {{n}}
    </div>
-  `
-})
-
-var controller = {
-  init(options){
-     //let {model, view} = options
-     let view = options.view
-     let model = options.model
-     this.model = model
-     this.view = view
-     this.view.render(this.model.data) // 初次渲染 view
-     this.bindEvents()
-     this.model.fetch(1)               // 获取一本书 
-      .then(()=>{
-       this.view.render(this.model.data)
+   <div>
+    <button v-on:click="addOne">加N</button> 
+    <button v-on:click="minusOne">减N</button>
+    <button v-on:click="reset">归零</button>
+   </div>
+ </div>
+  `,
+  created(){
+    model.fetch(1).then(()=>{
+      this.book = model.data
     })
   },
-  addOne(){
-      var oldNumber = $('#number').text() //string
-      var newNumber = oldNumber -0 +1
-      // $('#number').text(newNumber) 
-      // 用 put 发请求，修改数据
-      this.model.update({number:newNumber})
-        .then(()=>{
-      this.view.render(this.model.data)
+  methods:{
+    addOne(){
+      model.update({
+        number: this.book.number + (this.n-0)    // 读值
+      }).then(()=>{
+        this.view.book = this.model.data   // 赋值
     })
   },
-  minusOne(){
-     var oldNumber = $('#number').text()
-     var newNumber = oldNumber -0 -1
-     // $('#number').text(newNumber)
-     this.model.update({number:newNumber})
-       .then(()=>{
-     this.view.render(this.model.data)
+    minusOne(){
+      model.update({
+        number: this.book.number - (this.n-0)
+      }).then(()=>{
+       this.view.book = this.model.data
     })
   },
-  reset(){
-     // $('#number').text(0)
-     this.model.update({number:0})
-        .then(()=>{
-     this.view.render( this.model.data)
-    })
-  },
-  bindEvents(){
-    // this === controller
-    $(this.view.el).on('click','#addOne',this.addOne.bind(this))
-    $(this.view.el).on('click','#minusOne',this.minusOne.bind(this))
-    $(this.view.el).on('click','#reset',this.reset.bind(this))
+    reset(){
+        model.update({
+          number: 0
+        }).then(()=>{
+       this.view.book = this.model.data
+     })
+   },
   }
-}
-
-controller.init({view: view, model: model})
-
-
-
-
-
-
+})
 
 
 
